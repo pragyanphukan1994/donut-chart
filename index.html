@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donut Chart Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f0f2f7;
+      --panel-bg: #ffffff;
+      --border: #e0e4ef;
+      --text: #1a1d2e;
+      --muted: #6b7299;
+      --accent: #4f6ef7;
+      --radius: 14px;
+      --shadow: 0 4px 32px rgba(0, 0, 0, 0.10);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #4f6ef7 0%, #a259f7 100%);
+      color: white;
+      padding: 18px 36px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 16px rgba(79, 110, 247, 0.3);
+    }
+
+    header svg {
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      opacity: 0.82;
+      margin-top: 1px;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 24px;
+      padding: 24px 32px;
+      flex: 1;
+      align-items: start;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--panel-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 120px);
+    }
+
+    .panel-header {
+      background: linear-gradient(90deg, #f5f7ff, #eef0fa);
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header h2 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .panel-body {
+      padding: 18px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Form Inputs ── */
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    textarea,
+    input[type="number"],
+    select {
+      width: 100%;
+      background: #f7f8fd;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      color: var(--text);
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      background: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 55px;
+      line-height: 1.5;
+    }
+
+    select {
+      cursor: pointer;
+    }
+
+    /* ── Data rows ── */
+    #data-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .data-row {
+      background: #f7f8fd;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .data-row:hover {
+      box-shadow: 0 2px 12px rgba(79, 110, 247, 0.12);
+      border-color: #c5cef7;
+    }
+
+    .data-row.dragging {
+      opacity: 0.4;
+      transform: scale(0.97);
+    }
+
+    .data-row.drag-over {
+      border-color: var(--accent);
+      background: #eef2ff;
+    }
+
+    /* Row top: handles + color + delete */
+    .data-row-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drag-handle {
+      cursor: grab;
+      color: #bbb;
+      font-size: 1rem;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .color-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: 2.5px solid rgba(0, 0, 0, 0.12);
+      transition: transform 0.15s;
+    }
+
+    .color-dot:hover {
+      transform: scale(1.2);
+    }
+
+    .row-num {
+      flex: 1;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #e06c6c;
+      font-size: 1.1rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+
+    .delete-btn:hover {
+      background: #ffeaea;
+    }
+
+    /* Formatting toolbar */
+    .fmt-toolbar {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .fmt-btn {
+      background: #eef0fa;
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-family: inherit;
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
+      line-height: 1.6;
+    }
+
+    .fmt-btn:hover {
+      background: #d9ddf7;
+      border-color: var(--accent);
+    }
+
+    .fmt-btn.bold {
+      font-weight: 800;
+    }
+
+    .fmt-btn.italic {
+      font-style: italic;
+    }
+
+    .fmt-hint {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    /* Label textarea */
+    .row-label-input {
+      width: 100%;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 9px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      font-family: inherit;
+      color: var(--text);
+      resize: vertical;
+      min-height: 36px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color 0.2s;
+      user-select: text;
+    }
+
+    .row-label-input:focus {
+      border-color: var(--accent);
+    }
+
+    /* Value row */
+    .data-row-bottom {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-row-bottom label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+      margin: 0;
+    }
+
+    .row-value {
+      flex: 1;
+      padding: 6px 9px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      border-radius: 7px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f6ef7, #a259f7);
+      color: white;
+      box-shadow: 0 3px 14px rgba(79, 110, 247, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 18px rgba(79, 110, 247, 0.4);
+    }
+
+    .btn-outline {
+      background: #f0f2f7;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: #e4e8f8;
+      border-color: #c5cef7;
+    }
+
+    .btn-warn {
+      background: #fff3f0;
+      color: #c0392b;
+      border: 1.5px solid #f5c6bc;
+    }
+
+    .btn-warn:hover {
+      background: #fde8e4;
+    }
+
+    .btn-sm {
+      padding: 7px 12px;
+      font-size: 0.78rem;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Sliders ── */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .slider-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    /* ── Toggles ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle-row label {
+      margin: 0;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #ccc;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle input:checked+.toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked+.toggle-slider::before {
+      transform: translateX(16px);
+    }
+
+    /* ── Color picker wrap ── */
+    .color-picker-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .color-picker-wrap input[type="color"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      border: none;
+      padding: 0;
+    }
+
+    /* ── Chart area ── */
+    .chart-wrapper {
+      background: var(--panel-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
+      min-height: 600px;
+    }
+
+    #chart-svg {
+      width: 100%;
+      height: auto;
+      max-width: 900px;
+      overflow: visible;
+      display: block;
+    }
+
+    /* Label groups on SVG */
+    .svg-label-group {
+      cursor: grab;
+    }
+
+    .svg-label-group:active {
+      cursor: grabbing;
+    }
+
+    .svg-label-group.svg-dragging {
+      opacity: 0.85;
+    }
+
+    .svg-drag-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    /* ── Export bar ── */
+    .export-bar {
+      padding: 12px 20px;
+      background: #f7f8fd;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,0.15)" />
+      <path d="M18 6 A12 12 0 0 1 30 18" stroke="white" stroke-width="3" stroke-linecap="round" fill="none" />
+      <path d="M30 18 A12 12 0 0 1 18 30" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linecap="round"
+        fill="none" />
+      <path d="M18 30 A12 12 0 0 1 6 18" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round"
+        fill="none" />
+      <path d="M6 18 A12 12 0 0 1 18 6" stroke="rgba(255,255,255,0.15)" stroke-width="3" stroke-linecap="round"
+        fill="none" />
+      <circle cx="18" cy="18" r="6" fill="none" stroke="white" stroke-width="2" />
+    </svg>
+    <div>
+      <h1>Donut Chart Builder</h1>
+      <p>Interactive, fully customizable pie/donut chart designer</p>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ─── Left Panel ─── -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2>⚙️ Chart Settings</h2>
+      </div>
+      <div class="panel-body">
+
+        <!-- Center Text -->
+        <div class="section">
+          <div class="section-title">Center Text</div>
+          <div>
+            <label>Title</label>
+            <textarea id="cfg-title" rows="2">Title of the Chart</textarea>
+          </div>
+          <div>
+            <label>Subtitle</label>
+            <input type="text" id="cfg-subtitle" value="How We Spent our Days" />
+          </div>
+          <div>
+            <label>Title Font Size (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-title-size" min="8" max="28" value="13"
+                oninput="sv('title-size-val',this.value);renderChart()">
+              <span class="slider-val" id="title-size-val">13</span>
+            </div>
+          </div>
+          <div>
+            <label>Subtitle Font Size (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-sub-size" min="6" max="24" value="12"
+                oninput="sv('sub-size-val',this.value);renderChart()">
+              <span class="slider-val" id="sub-size-val">12</span>
+            </div>
+          </div>
+          <div>
+            <label>Title Color</label>
+            <div class="color-picker-wrap">
+              <div id="title-color-dot"
+                style="width:36px;height:22px;border-radius:6px;background:#1a1d2e;border:2px solid #ddd;cursor:pointer;">
+              </div>
+              <input type="color" id="cfg-title-color" value="#1a1d2e"
+                oninput="document.getElementById('title-color-dot').style.background=this.value;renderChart()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Shape -->
+        <div class="section">
+          <div class="section-title">Chart Shape</div>
+          <div>
+            <label>Outer Radius (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-outer" min="80" max="220" value="155"
+                oninput="sv('outer-val',this.value);renderChart()">
+              <span class="slider-val" id="outer-val">155</span>
+            </div>
+          </div>
+          <div>
+            <label>Inner Radius / Hole Size (%)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-inner-pct" min="0" max="80" value="55"
+                oninput="sv('inner-pct-val',this.value+'%');renderChart()">
+              <span class="slider-val" id="inner-pct-val">55%</span>
+            </div>
+          </div>
+          <div>
+            <label>Segment Gap (deg)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-gap" min="0" max="4" step="0.1" value="0.6"
+                oninput="sv('gap-val',this.value+'°');renderChart()">
+              <span class="slider-val" id="gap-val">0.6°</span>
+            </div>
+          </div>
+          <div>
+            <label>Background Ring Color</label>
+            <div class="color-picker-wrap">
+              <div id="ring-color-dot"
+                style="width:36px;height:22px;border-radius:6px;background:#e8eaf2;border:2px solid #ddd;cursor:pointer;">
+              </div>
+              <input type="color" id="cfg-ring-color" value="#e8eaf2"
+                oninput="document.getElementById('ring-color-dot').style.background=this.value;renderChart()">
+            </div>
+          </div>
+          <div>
+            <label>Background Fill</label>
+            <div class="color-picker-wrap">
+              <div id="bg-color-dot"
+                style="width:36px;height:22px;border-radius:6px;background:#ffffff;border:2px solid #ddd;cursor:pointer;">
+              </div>
+              <input type="color" id="cfg-bg-color" value="#ffffff"
+                oninput="document.getElementById('bg-color-dot').style.background=this.value;renderChart()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Labels -->
+        <div class="section">
+          <div class="section-title">Labels</div>
+          <div>
+            <label>Label Font Size (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-label-size" min="7" max="18" value="11"
+                oninput="sv('label-size-val',this.value);renderChart()">
+              <span class="slider-val" id="label-size-val">11</span>
+            </div>
+          </div>
+          <div>
+            <label>Percentage Font Size (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-pct-size" min="8" max="22" value="13"
+                oninput="sv('pct-size-val',this.value);renderChart()">
+              <span class="slider-val" id="pct-size-val">13</span>
+            </div>
+          </div>
+          <div>
+            <label>Label Offset from Edge (px)</label>
+            <div class="slider-row">
+              <input type="range" id="cfg-label-offset" min="10" max="80" value="30"
+                oninput="sv('loffset-val',this.value);renderChart()">
+              <span class="slider-val" id="loffset-val">30</span>
+            </div>
+          </div>
+          <div class="toggle-row">
+            <label>Show Percentage</label>
+            <label class="toggle"><input type="checkbox" id="cfg-show-pct" checked onchange="renderChart()"><span
+                class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <label>Show Connector Lines</label>
+            <label class="toggle"><input type="checkbox" id="cfg-show-lines" checked onchange="renderChart()"><span
+                class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <label>Show Dot on Label</label>
+            <label class="toggle"><input type="checkbox" id="cfg-show-dot" checked onchange="renderChart()"><span
+                class="toggle-slider"></span></label>
+          </div>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn btn-warn btn-sm" onclick="resetPositions()">↺ Reset Label Positions</button>
+          </div>
+          <div class="svg-drag-hint">⟵ Drag labels on the chart to reposition them ⟶</div>
+        </div>
+
+        <!-- Data Segments -->
+        <div class="section">
+          <div class="section-title">Data Segments</div>
+          <div id="data-list"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary btn-sm" onclick="addRow()">＋ Add Segment</button>
+            <button class="btn btn-outline btn-sm" onclick="randomizeColors()">🎨 Random Colors</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="export-bar">
+        <button class="btn btn-outline btn-sm" onclick="exportSVG()">⬇ SVG</button>
+        <button class="btn btn-primary btn-sm" onclick="exportPNG()">⬇ PNG</button>
+      </div>
+    </div>
+
+    <!-- ─── Chart Area ─── -->
+    <div class="chart-wrapper">
+      <svg id="chart-svg" viewBox="0 0 900 600"></svg>
+    </div>
+
+  </div>
+
+  <script>
+    // ─── Data ──────────────────────────────────────────────────────────────────
+    let chartData = [
+      { label: "Interact with Scientist one-on-one", value: 7, color: "#f7941d", pos: null },
+      { label: "Tour", value: 5, color: "#f05a24", pos: null },
+      { label: "Lecture/Demos", value: 3, color: "#be1e2d", pos: null },
+      { label: "Web Training", value: 2, color: "#f15a9e", pos: null },
+      { label: "SURF", value: 2, color: "#c2a8d8", pos: null },
+      { label: "Lecture", value: 3, color: "#7b5ea7", pos: null },
+      { label: "Teacher Training", value: 2, color: "#3b1f6b", pos: null },
+      { label: "Lecture/Activity/Tour", value: 31, color: "#1a5ca8", pos: null },
+      { label: "Lecture/Activity", value: 25, color: "#5dbdba", pos: null },
+      { label: "Other (Intro to program, assessment, etc)", value: 9, color: "#8dc63f", pos: null },
+      { label: "Training/Activities", value: 11, color: "#f7d41d", pos: null },
+    ];
+
+    // ─── Helper ───────────────────────────────────────────────────────────────
+    function sv(id, val) { document.getElementById(id).textContent = val; }
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+
+    // ─── Drag (panel rows) ────────────────────────────────────────────────────
+    let rowDragSrc = null;
+
+    // ─── Panel ───────────────────────────────────────────────────────────────
+    function buildPanel() {
+      const list = document.getElementById('data-list');
+      list.innerHTML = '';
+      chartData.forEach((d, i) => {
+        const row = document.createElement('div');
+        row.className = 'data-row';
+        row.draggable = true;
+        row.dataset.idx = i;
+        row.innerHTML = `
+      <div class="data-row-top">
+        <span class="drag-handle" title="Drag to reorder">⠿</span>
+        <div class="color-picker-wrap">
+          <div class="color-dot" style="background:${d.color}" title="Pick color"></div>
+          <input type="color" value="${d.color}" onchange="chartData[${i}].color=this.value;buildPanel();renderChart()">
+        </div>
+        <span class="row-num">Segment ${i + 1}</span>
+        <button class="delete-btn" title="Remove" onclick="removeRow(${i})">✕</button>
+      </div>
+      <div class="fmt-toolbar">
+        <button class="fmt-btn bold"   title="Bold — wraps selection in **...**"   onclick="applyFmt(${i},'bold')">B</button>
+        <button class="fmt-btn italic" title="Italic — wraps selection in *...*"   onclick="applyFmt(${i},'italic')">I</button>
+        <button class="fmt-btn"        title="Insert new line"                      onclick="applyFmt(${i},'newline')">↵</button>
+        <span class="fmt-hint">**bold** &nbsp; *italic* &nbsp; ↵ newline</span>
+      </div>
+      <textarea class="row-label-input" id="lbl-${i}" rows="2" placeholder="Label text…"
+        oninput="chartData[${i}].label=this.value;renderChart();autoResize(this)">${escHtml(d.label)}</textarea>
+      <div class="data-row-bottom">
+        <label>Value</label>
+        <input class="row-value" type="number" min="0" max="9999" step="0.1" value="${d.value}" placeholder="0"
+          oninput="chartData[${i}].value=parseFloat(this.value)||0;renderChart()">
+      </div>`;
+
+        // Panel drag-to-reorder
+        row.addEventListener('dragstart', e => { rowDragSrc = i; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+        row.addEventListener('dragend', () => { row.classList.remove('dragging'); document.querySelectorAll('.data-row').forEach(r => r.classList.remove('drag-over')); });
+        row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drag-over'); });
+        row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+        row.addEventListener('drop', e => {
+          e.preventDefault();
+          if (rowDragSrc !== null && rowDragSrc !== i) {
+            const tmp = chartData[rowDragSrc];
+            chartData.splice(rowDragSrc, 1);
+            chartData.splice(i, 0, tmp);
+            buildPanel(); renderChart();
+          }
+        });
+
+        list.appendChild(row);
+        const ta = row.querySelector('.row-label-input');
+        if (ta) { autoResize(ta); }
+      });
+    }
+
+    function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    function applyFmt(i, type) {
+      const ta = document.getElementById(`lbl-${i}`);
+      if (!ta) return;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const sel = ta.value.substring(start, end);
+      let insert = '';
+      if (type === 'bold') insert = `**${sel || 'bold text'}**`;
+      else if (type === 'italic') insert = `*${sel || 'italic text'}*`;
+      else if (type === 'newline') insert = '\n';
+      const before = ta.value.substring(0, start);
+      const after = ta.value.substring(end);
+      ta.value = before + insert + after;
+      chartData[i].label = ta.value;
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = start + insert.length;
+      autoResize(ta);
+      renderChart();
+    }
+
+    function addRow() {
+      const hue = Math.floor(Math.random() * 360);
+      chartData.push({ label: 'New Segment', value: 5, color: `hsl(${hue},70%,55%)`, pos: null });
+      buildPanel(); renderChart();
+    }
+
+    function removeRow(i) { chartData.splice(i, 1); buildPanel(); renderChart(); }
+
+    function randomizeColors() {
+      const pal = ['#f7941d', '#f05a24', '#be1e2d', '#f15a9e', '#c2a8d8', '#7b5ea7',
+        '#3b1f6b', '#1a5ca8', '#5dbdba', '#8dc63f', '#f7d41d', '#2ecc71',
+        '#e74c3c', '#3498db', '#9b59b6', '#1abc9c', '#e67e22', '#c0392b'];
+      chartData.forEach((d, i) => d.color = pal[i % pal.length]);
+      buildPanel(); renderChart();
+    }
+
+    function resetPositions() { chartData.forEach(d => d.pos = null); renderChart(); }
+
+    // ─── Parse formatted label markup ─────────────────────────────────────────
+    // Supports **bold**, *italic*, \n newlines
+    // Returns array of lines, each line = array of spans: { text, bold, italic }
+    function parseLabel(raw) {
+      const rawLines = raw.split('\n');
+      return rawLines.map(line => {
+        const spans = [];
+        // tokenise: **...** bold, *...* italic, plain
+        const re = /\*\*(.+?)\*\*|\*(.+?)\*/gs;
+        let last = 0, m;
+        while ((m = re.exec(line)) !== null) {
+          if (m.index > last) spans.push({ text: line.slice(last, m.index), bold: false, italic: false });
+          if (m[1] !== undefined) spans.push({ text: m[1], bold: true, italic: false });
+          else spans.push({ text: m[2], bold: false, italic: true });
+          last = m.index + m[0].length;
+        }
+        if (last < line.length) spans.push({ text: line.slice(last), bold: false, italic: false });
+        return spans.length ? spans : [{ text: '', bold: false, italic: false }];
+      });
+    }
+
+    // ─── SVG helpers ──────────────────────────────────────────────────────────
+    function svgEl(tag, attrs = {}) {
+      const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+      return e;
+    }
+    function appSvg(parent, tag, attrs) { parent.appendChild(svgEl(tag, attrs)); }
+
+    function polarToXY(cx, cy, r, deg) {
+      const rad = (deg - 90) * Math.PI / 180;
+      return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+    }
+    function slice(cx, cy, oR, iR, s, e) {
+      const [ox1, oy1] = polarToXY(cx, cy, oR, s), [ox2, oy2] = polarToXY(cx, cy, oR, e);
+      const [ix1, iy1] = polarToXY(cx, cy, iR, e), [ix2, iy2] = polarToXY(cx, cy, iR, s);
+      const lg = (e - s) > 180 ? 1 : 0;
+      return `M${ox1} ${oy1} A${oR} ${oR} 0 ${lg} 1 ${ox2} ${oy2} L${ix1} ${iy1} A${iR} ${iR} 0 ${lg} 0 ${ix2} ${iy2}Z`;
+    }
+
+    // ─── SVG label drag state ──────────────────────────────────────────────────
+    let svgDrag = null; // { dataIdx, baseX, baseY, cursorX0, cursorY0 }
+
+    // ─── Render ───────────────────────────────────────────────────────────────
+    let lastParts = []; // store computed parts for drag use
+
+    function renderChart() {
+      const svg = document.getElementById('chart-svg');
+      const W = 900, H = 600;
+      const cx = W / 2, cy = H / 2;
+
+      // Config values
+      const outerR = +document.getElementById('cfg-outer').value;
+      const innerPct = +document.getElementById('cfg-inner-pct').value / 100;
+      const innerR = outerR * innerPct;
+      const gapDeg = +document.getElementById('cfg-gap').value;
+      const showPct = document.getElementById('cfg-show-pct').checked;
+      const showLines = document.getElementById('cfg-show-lines').checked;
+      const showDot = document.getElementById('cfg-show-dot').checked;
+      const titleTxt = document.getElementById('cfg-title').value;
+      const subTxt = document.getElementById('cfg-subtitle').value;
+      const titleSz = +document.getElementById('cfg-title-size').value;
+      const subSz = +document.getElementById('cfg-sub-size').value;
+      const titleClr = document.getElementById('cfg-title-color').value;
+      const labelSz = +document.getElementById('cfg-label-size').value;
+      const pctSz = +document.getElementById('cfg-pct-size').value;
+      const labelOff = +document.getElementById('cfg-label-offset').value;
+      const ringColor = document.getElementById('cfg-ring-color').value;
+      const bgColor = document.getElementById('cfg-bg-color').value;
+
+      const total = chartData.reduce((s, d) => s + Math.max(0, d.value), 0) || 1;
+      const valid = chartData.filter(d => d.value > 0);
+
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.innerHTML = '';
+
+      // Defs (shadow filter)
+      const defs = svgEl('defs');
+      const filter = svgEl('filter', { id: 'dropshadow', x: '-20%', y: '-20%', width: '140%', height: '140%' });
+      filter.appendChild(svgEl('feDropShadow', { dx: '0', dy: '4', stdDeviation: '12', 'flood-color': 'rgba(0,0,0,0.11)' }));
+      defs.appendChild(filter);
+      svg.appendChild(defs);
+
+      // Background
+      svg.appendChild(svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: bgColor }));
+
+      // Shadow disc
+      appSvg(svg, 'circle', { cx, cy, r: outerR + 18, fill: ringColor, filter: 'url(#dropshadow)' });
+      appSvg(svg, 'circle', { cx, cy, r: innerR - 2, fill: 'white' });
+
+      // Build parts
+      let parts = [];
+      let angle = 0;
+      valid.forEach((d, vi) => {
+        const totalIdx = chartData.indexOf(d);
+        const deg = (d.value / total) * 360;
+        const midDeg = angle + deg / 2;
+        parts.push({ ...d, totalIdx, startDeg: angle, endDeg: angle + deg, midDeg, pct: d.value / total * 100 });
+        angle += deg;
+      });
+      lastParts = parts;
+
+      // Draw slices
+      const sliceGroup = svgEl('g');
+      parts.forEach(p => {
+        const s = p.startDeg + gapDeg / 2, e = p.endDeg - gapDeg / 2;
+        if (e <= s) return;
+        const path = svgEl('path', { d: slice(cx, cy, outerR, innerR, s, e), fill: p.color, style: 'cursor:pointer;transition:opacity 0.18s' });
+        path.addEventListener('mouseenter', () => path.setAttribute('opacity', '0.8'));
+        path.addEventListener('mouseleave', () => path.setAttribute('opacity', '1'));
+        sliceGroup.appendChild(path);
+      });
+      svg.appendChild(sliceGroup);
+      appSvg(svg, 'circle', { cx, cy, r: innerR - 1, fill: 'white' });
+
+      // Center text (title)
+      const tg = svgEl('g');
+      const tLines = titleTxt.split('\n').filter(Boolean);
+      const lh = titleSz * 1.45;
+      const totalTH = tLines.length * lh + (subTxt ? subSz * 2.2 : 0);
+      let ty = cy - totalTH / 2 + titleSz;
+      tLines.forEach(line => {
+        const t = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': titleSz, 'font-weight': '700', 'font-family': 'Inter, sans-serif' });
+        t.textContent = line; tg.appendChild(t); ty += lh;
+      });
+      if (subTxt) {
+        ty += subSz * 0.6;
+        const sub = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': subSz, 'font-weight': '600', 'font-family': 'Inter, sans-serif', opacity: '0.72' });
+        sub.textContent = subTxt; tg.appendChild(sub);
+      }
+      svg.appendChild(tg);
+
+      // ── Labels ──────────────────────────────────────────────────────────────
+      const labelR = outerR + labelOff;
+      const rightParts = parts.filter(p => p.midDeg % 360 < 180);
+      const leftParts = parts.filter(p => p.midDeg % 360 >= 180);
+
+      function fanOut(arr) {
+        const gap = labelSz * 1.65;
+        let pos = arr.map(p => { const [, ly] = polarToXY(cx, cy, labelR, p.midDeg); return { p, y: ly }; });
+        pos.sort((a, b) => a.y - b.y);
+        for (let it = 0; it < 300; it++) {
+          let mv = false;
+          for (let i = 1; i < pos.length; i++) {
+            const d = pos[i].y - pos[i - 1].y;
+            if (d < gap) { const push = (gap - d) / 2; pos[i - 1].y -= push; pos[i].y += push; mv = true; }
+          }
+          if (!mv) break;
+        }
+        pos.forEach(p => p.y = Math.max(20, Math.min(H - 20, p.y)));
+        return pos.map(po => ({ p: po.p, autoY: po.y }));
+      }
+
+      const rf = fanOut(rightParts);
+      const lf = fanOut(leftParts);
+
+      function drawLabel({ p, autoY }, isRight) {
+        const tidx = p.totalIdx;
+        const custom = chartData[tidx] ? chartData[tidx].pos : null;
+        const finalX = custom ? custom.x : (isRight ? cx + outerR + labelOff - 2 : cx - outerR - labelOff + 2);
+        const finalY = custom ? custom.y : autoY;
+        const side = custom ? (finalX >= cx ? 'right' : 'left') : (isRight ? 'right' : 'left');
+        const isR = side === 'right';
+        const dotR = pctSz * 0.38;
+        const textX = isR ? finalX + 8 : finalX - 8;
+        const lblAnchor = isR ? 'start' : 'end';
+
+        // Connector line
+        const [sx, sy] = polarToXY(cx, cy, outerR - 4, p.midDeg);
+        const [ex, ey] = polarToXY(cx, cy, outerR + labelOff * 0.55, p.midDeg);
+
+        // Build draggable group
+        const g = svgEl('g');
+        g.setAttribute('class', 'svg-label-group');
+        g.setAttribute('data-label-idx', tidx);
+        g.setAttribute('style', 'cursor:grab');
+
+        if (showLines) {
+          const line = svgEl('polyline', {
+            points: `${sx},${sy} ${ex},${ey} ${finalX},${finalY}`,
+            fill: 'none', stroke: p.color, 'stroke-width': '1.3',
+            'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+          });
+          g.appendChild(line);
+        }
+
+        if (showPct) {
+          const pctT = svgEl('text', {
+            x: isR ? finalX - 4 : finalX + 4, y: finalY - labelSz * 1.15,
+            'text-anchor': isR ? 'end' : 'start', 'dominant-baseline': 'middle',
+            fill: p.color, 'font-size': pctSz, 'font-weight': '800', 'font-family': 'Inter, sans-serif'
+          });
+          pctT.textContent = `${Math.round(p.pct)}%`;
+          g.appendChild(pctT);
+        }
+
+        if (showDot) {
+          appSvg(g, 'circle', { cx: textX + (isR ? 0 : -4), cy: finalY, r: dotR, fill: p.color });
+        }
+
+        // Formatted label text
+        const rawLabel = p.label || '';
+        const parsedLines = parseLabel(rawLabel);
+        const lineHeight = labelSz * 1.45;
+        const lblDotOffset = dotR * 2 + 3;
+        const lblX = isR ? textX + lblDotOffset : textX - lblDotOffset;
+        const startY = finalY - ((parsedLines.length - 1) * lineHeight) / 2;
+
+        parsedLines.forEach((spans, li) => {
+          const tEl = svgEl('text', {
+            x: lblX, y: startY + li * lineHeight,
+            'text-anchor': lblAnchor, 'dominant-baseline': 'middle',
+            fill: '#333', 'font-size': labelSz, 'font-family': 'Inter, sans-serif'
+          });
+          if (spans.length === 1 && !spans[0].bold && !spans[0].italic) {
+            tEl.textContent = spans[0].text;
+          } else {
+            spans.forEach(sp => {
+              const ts = svgEl('tspan', {
+                'font-weight': sp.bold ? '800' : '400',
+                'font-style': sp.italic ? 'italic' : 'normal'
+              });
+              ts.textContent = sp.text;
+              tEl.appendChild(ts);
+            });
+          }
+          g.appendChild(tEl);
+        });
+
+        // Invisible hit area for easier grabbing
+        const bbox_approx_h = Math.max(parsedLines.length * lineHeight + (showPct ? pctSz * 2 : 0), 24);
+        const bbox_approx_w = 120;
+        const hitX = isR ? finalX - 4 : finalX - bbox_approx_w + 4;
+        appSvg(g, 'rect', {
+          x: hitX, y: finalY - bbox_approx_h / 2 - (showPct ? pctSz * 1.5 : 0),
+          width: bbox_approx_w + 8, height: bbox_approx_h + (showPct ? pctSz * 1.8 : 0),
+          fill: 'transparent', rx: 4
+        });
+
+        svg.appendChild(g);
+      }
+
+      rf.forEach(item => drawLabel(item, true));
+      lf.forEach(item => drawLabel(item, false));
+
+      // ── SVG Label Drag Events ───────────────────────────────────────────────
+      attachSvgDrag(svg, W, H);
+    }
+
+    function attachSvgDrag(svg, W, H) {
+      const rect = () => svg.getBoundingClientRect();
+
+      function toSvgCoords(clientX, clientY) {
+        const r = rect();
+        return [(clientX - r.left) / r.width * W, (clientY - r.top) / r.height * H];
+      }
+
+      svg.addEventListener('mousedown', e => {
+        const g = e.target.closest('[data-label-idx]');
+        if (!g) return;
+        e.preventDefault();
+        const idx = parseInt(g.dataset.labelIdx);
+        const [mx, my] = toSvgCoords(e.clientX, e.clientY);
+        const cur = chartData[idx].pos;
+        svgDrag = {
+          idx,
+          startPosX: cur ? cur.x : mx,
+          startPosY: cur ? cur.y : my,
+          startMX: mx, startMY: my
+        };
+        document.body.style.cursor = 'grabbing';
+      });
+
+      window.addEventListener('mousemove', e => {
+        if (!svgDrag) return;
+        const [mx, my] = toSvgCoords(e.clientX, e.clientY);
+        const dx = mx - svgDrag.startMX;
+        const dy = my - svgDrag.startMY;
+        chartData[svgDrag.idx].pos = {
+          x: Math.max(4, Math.min(W - 4, svgDrag.startPosX + dx)),
+          y: Math.max(4, Math.min(H - 4, svgDrag.startPosY + dy))
+        };
+        renderChart();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (svgDrag) { svgDrag = null; document.body.style.cursor = ''; }
+      });
+    }
+
+    // ─── Export ───────────────────────────────────────────────────────────────
+    function exportSVG() {
+      const svg = document.getElementById('chart-svg');
+      const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'donut-chart.svg'; a.click();
+    }
+
+    function exportPNG() {
+      const svg = document.getElementById('chart-svg');
+      const clone = svg.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' }));
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = 1800; c.height = 1200;
+        const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'donut-chart.png'; a.click();
+      };
+      img.src = url;
+    }
+
+    // ─── Live inputs ──────────────────────────────────────────────────────────
+    document.querySelectorAll('#cfg-title, #cfg-subtitle').forEach(el =>
+      el.addEventListener('input', renderChart));
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    buildPanel();
+    renderChart();
+  </script>
+</body>
+
+</html>
