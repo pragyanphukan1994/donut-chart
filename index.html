@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Donut Chart Builder</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     *,
     *::before,
@@ -33,10 +34,9 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      user-select: none;
     }
 
-    /* ── Header ── */
+    /* Header */
     header {
       background: linear-gradient(135deg, #4f6ef7 0%, #a259f7 100%);
       color: white;
@@ -45,6 +45,7 @@
       align-items: center;
       gap: 14px;
       box-shadow: 0 2px 16px rgba(79, 110, 247, 0.3);
+      flex-shrink: 0;
     }
 
     header svg {
@@ -63,7 +64,7 @@
       margin-top: 1px;
     }
 
-    /* ── Layout ── */
+    /* Layout */
     .layout {
       display: grid;
       grid-template-columns: 390px 1fr;
@@ -73,7 +74,7 @@
       align-items: start;
     }
 
-    /* ── Panel ── */
+    /* Panel */
     .panel {
       background: var(--panel-bg);
       border-radius: var(--radius);
@@ -108,7 +109,7 @@
       gap: 20px;
     }
 
-    /* ── Sections ── */
+    /* Sections */
     .section {
       display: flex;
       flex-direction: column;
@@ -133,7 +134,7 @@
       background: var(--border);
     }
 
-    /* ── Form Inputs ── */
+    /* Inputs */
     label {
       font-size: 0.78rem;
       font-weight: 600;
@@ -158,9 +159,8 @@
       outline: none;
     }
 
-    input[type="text"]:focus,
+    input:focus,
     textarea:focus,
-    input[type="number"]:focus,
     select:focus {
       border-color: var(--accent);
       background: #fff;
@@ -176,7 +176,7 @@
       cursor: pointer;
     }
 
-    /* ── Data rows ── */
+    /* Data rows */
     #data-list {
       display: flex;
       flex-direction: column;
@@ -209,7 +209,6 @@
       background: #eef2ff;
     }
 
-    /* Row top: handles + color + delete */
     .data-row-top {
       display: flex;
       align-items: center;
@@ -351,7 +350,7 @@
       border-radius: 7px;
     }
 
-    /* ── Buttons ── */
+    /* Buttons */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -410,7 +409,7 @@
       flex-wrap: wrap;
     }
 
-    /* ── Sliders ── */
+    /* Sliders */
     .slider-row {
       display: flex;
       align-items: center;
@@ -430,7 +429,7 @@
       text-align: right;
     }
 
-    /* ── Toggles ── */
+    /* Toggles */
     .toggle-row {
       display: flex;
       align-items: center;
@@ -486,7 +485,7 @@
       transform: translateX(16px);
     }
 
-    /* ── Color picker wrap ── */
+    /* Color picker */
     .color-picker-wrap {
       position: relative;
       display: inline-block;
@@ -503,7 +502,7 @@
       padding: 0;
     }
 
-    /* ── Chart area ── */
+    /* Chart area */
     .chart-wrapper {
       background: var(--panel-bg);
       border-radius: var(--radius);
@@ -524,20 +523,7 @@
       display: block;
     }
 
-    /* Label groups on SVG */
-    .svg-label-group {
-      cursor: grab;
-    }
-
-    .svg-label-group:active {
-      cursor: grabbing;
-    }
-
-    .svg-label-group.svg-dragging {
-      opacity: 0.85;
-    }
-
-    .svg-drag-hint {
+    .drag-hint {
       font-size: 0.72rem;
       color: var(--muted);
       text-align: center;
@@ -548,7 +534,73 @@
       gap: 4px;
     }
 
-    /* ── Export bar ── */
+    /* Excel drop zone */
+    .excel-drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 18px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #f7f8fd;
+      position: relative;
+    }
+
+    .excel-drop-zone:hover,
+    .excel-drop-zone.drag-active {
+      border-color: var(--accent);
+      background: #eef2ff;
+    }
+
+    .excel-drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .excel-drop-zone .drop-icon {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+
+    .excel-drop-zone .drop-title {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .excel-drop-zone .drop-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .excel-status {
+      font-size: 0.76rem;
+      border-radius: 7px;
+      padding: 7px 10px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .excel-status.ok {
+      background: #e8f8ef;
+      color: #1e7e4a;
+      border: 1px solid #b5e8cf;
+      display: block;
+    }
+
+    .excel-status.err {
+      background: #fdecea;
+      color: #b0271e;
+      border: 1px solid #f5bab7;
+      display: block;
+    }
+
+    /* Export bar */
     .export-bar {
       padding: 12px 20px;
       background: #f7f8fd;
@@ -592,8 +644,7 @@
   </header>
 
   <div class="layout">
-
-    <!-- ─── Left Panel ─── -->
+    <!-- Left Panel -->
     <div class="panel">
       <div class="panel-header">
         <h2>⚙️ Chart Settings</h2>
@@ -609,7 +660,7 @@
           </div>
           <div>
             <label>Subtitle</label>
-            <input type="text" id="cfg-subtitle" value="How We Spent our Days" />
+            <input type="text" id="cfg-subtitle" value="Subtitle of the Chart" />
           </div>
           <div>
             <label>Title Font Size (px)</label>
@@ -733,7 +784,22 @@
           <div class="btn-row" style="margin-top:4px">
             <button class="btn btn-warn btn-sm" onclick="resetPositions()">↺ Reset Label Positions</button>
           </div>
-          <div class="svg-drag-hint">⟵ Drag labels on the chart to reposition them ⟶</div>
+          <div class="drag-hint">⟵ Drag labels on the chart to reposition them ⟶</div>
+        </div>
+
+        <!-- Import Excel -->
+        <div class="section">
+          <div class="section-title">Import from Excel / CSV</div>
+          <div class="excel-drop-zone" id="excel-drop-zone" ondragover="excelDragOver(event)"
+            ondragleave="excelDragLeave()" ondrop="excelDrop(event)">
+            <input type="file" accept=".xlsx,.xls,.csv,.ods" onchange="importExcel(this.files[0])"
+              id="excel-file-input">
+            <div class="drop-icon">📊</div>
+            <div class="drop-title">Drop Excel/CSV file here</div>
+            <div class="drop-sub">or click to browse &nbsp;·&nbsp; .xlsx · .xls · .csv</div>
+            <div class="drop-sub" style="margin-top:6px;font-weight:600">Col A = Label &nbsp;|&nbsp; Col B = Value</div>
+          </div>
+          <div class="excel-status" id="excel-status"></div>
         </div>
 
         <!-- Data Segments -->
@@ -753,15 +819,17 @@
       </div>
     </div>
 
-    <!-- ─── Chart Area ─── -->
+    <!-- Chart Area -->
     <div class="chart-wrapper">
       <svg id="chart-svg" viewBox="0 0 900 600"></svg>
     </div>
-
   </div>
 
   <script>
-    // ─── Data ──────────────────────────────────────────────────────────────────
+    // ── Constants ─────────────────────────────────────────────────────────────
+    const SVG_W = 900, SVG_H = 600;
+
+    // ── Data ──────────────────────────────────────────────────────────────────
     let chartData = [
       { label: "Interact with Scientist one-on-one", value: 7, color: "#f7941d", pos: null },
       { label: "Tour", value: 5, color: "#f05a24", pos: null },
@@ -776,14 +844,79 @@
       { label: "Training/Activities", value: 11, color: "#f7d41d", pos: null },
     ];
 
-    // ─── Helper ───────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
     function sv(id, val) { document.getElementById(id).textContent = val; }
     function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+    function svgEl(tag, attrs = {}) {
+      const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+      return e;
+    }
+    function appSvg(p, tag, attrs) { p.appendChild(svgEl(tag, attrs)); }
+    function polarToXY(cx, cy, r, deg) {
+      const rad = (deg - 90) * Math.PI / 180;
+      return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+    }
+    function slicePath(cx, cy, oR, iR, s, e) {
+      const [ox1, oy1] = polarToXY(cx, cy, oR, s), [ox2, oy2] = polarToXY(cx, cy, oR, e);
+      const [ix1, iy1] = polarToXY(cx, cy, iR, e), [ix2, iy2] = polarToXY(cx, cy, iR, s);
+      const lg = (e - s) > 180 ? 1 : 0;
+      return `M${ox1} ${oy1} A${oR} ${oR} 0 ${lg} 1 ${ox2} ${oy2} L${ix1} ${iy1} A${iR} ${iR} 0 ${lg} 0 ${ix2} ${iy2}Z`;
+    }
 
-    // ─── Drag (panel rows) ────────────────────────────────────────────────────
+    // ── SVG coords conversion (cached per drag) ───────────────────────────────
+    function toSvgXY(clientX, clientY) {
+      const r = document.getElementById('chart-svg').getBoundingClientRect();
+      return [
+        (clientX - r.left) / r.width * SVG_W,
+        (clientY - r.top) / r.height * SVG_H
+      ];
+    }
+
+    // ── Label drag state ──────────────────────────────────────────────────────
+    // Track open state: { idx, startPosX, startPosY, startMX, startMY, pendingX, pendingY }
+    let drag = null;
+
+    // Global handlers – attached ONCE, always live
+    window.addEventListener('mousemove', e => {
+      if (!drag) return;
+      e.preventDefault();
+
+      const [mx, my] = toSvgXY(e.clientX, e.clientY);
+      const dx = mx - drag.startMX;
+      const dy = my - drag.startMY;
+      drag.pendingX = drag.startPosX + dx;
+      drag.pendingY = drag.startPosY + dy;
+
+      // ── Imperatively update SVG – NO full re-render ─────────────────────
+      const svg = document.getElementById('chart-svg');
+
+      // Move the label group using transform (fast, no layout recalc)
+      const g = svg.querySelector(`[data-label-idx="${drag.idx}"]`);
+      if (g) g.setAttribute('transform', `translate(${dx},${dy})`);
+
+      // Update the connector's last endpoint directly
+      const conn = svg.querySelector(`[data-conn-idx="${drag.idx}"]`);
+      if (conn) {
+        const base = conn.getAttribute('data-base'); // "sx,sy ex,ey"
+        conn.setAttribute('points', `${base} ${drag.pendingX},${drag.pendingY}`);
+      }
+    }, { passive: false });
+
+    window.addEventListener('mouseup', () => {
+      if (!drag) return;
+      // Commit final position, then do ONE full re-render
+      if (drag.pendingX !== undefined) {
+        chartData[drag.idx].pos = { x: drag.pendingX, y: drag.pendingY };
+      }
+      drag = null;
+      document.body.style.cursor = '';
+      renderChart();
+    });
+
+    // ── Panel rows ────────────────────────────────────────────────────────────
     let rowDragSrc = null;
 
-    // ─── Panel ───────────────────────────────────────────────────────────────
     function buildPanel() {
       const list = document.getElementById('data-list');
       list.innerHTML = '';
@@ -803,22 +936,27 @@
         <button class="delete-btn" title="Remove" onclick="removeRow(${i})">✕</button>
       </div>
       <div class="fmt-toolbar">
-        <button class="fmt-btn bold"   title="Bold — wraps selection in **...**"   onclick="applyFmt(${i},'bold')">B</button>
-        <button class="fmt-btn italic" title="Italic — wraps selection in *...*"   onclick="applyFmt(${i},'italic')">I</button>
-        <button class="fmt-btn"        title="Insert new line"                      onclick="applyFmt(${i},'newline')">↵</button>
-        <span class="fmt-hint">**bold** &nbsp; *italic* &nbsp; ↵ newline</span>
+        <button class="fmt-btn bold"   onclick="applyFmt(${i},'bold')"    title="Bold (**text**)">B</button>
+        <button class="fmt-btn italic" onclick="applyFmt(${i},'italic')"  title="Italic (*text*)">I</button>
+        <button class="fmt-btn"        onclick="applyFmt(${i},'newline')" title="New line">↵</button>
+        <span class="fmt-hint">**bold**&nbsp;&nbsp;*italic*&nbsp;&nbsp;↵ newline</span>
       </div>
       <textarea class="row-label-input" id="lbl-${i}" rows="2" placeholder="Label text…"
         oninput="chartData[${i}].label=this.value;renderChart();autoResize(this)">${escHtml(d.label)}</textarea>
       <div class="data-row-bottom">
         <label>Value</label>
-        <input class="row-value" type="number" min="0" max="9999" step="0.1" value="${d.value}" placeholder="0"
+        <input class="row-value" type="number" min="0" max="9999" step="0.1" value="${d.value}"
           oninput="chartData[${i}].value=parseFloat(this.value)||0;renderChart()">
       </div>`;
 
-        // Panel drag-to-reorder
-        row.addEventListener('dragstart', e => { rowDragSrc = i; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
-        row.addEventListener('dragend', () => { row.classList.remove('dragging'); document.querySelectorAll('.data-row').forEach(r => r.classList.remove('drag-over')); });
+        row.addEventListener('dragstart', e => {
+          rowDragSrc = i; row.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+          document.querySelectorAll('.data-row').forEach(r => r.classList.remove('drag-over'));
+        });
         row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drag-over'); });
         row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
         row.addEventListener('drop', e => {
@@ -833,27 +971,26 @@
 
         list.appendChild(row);
         const ta = row.querySelector('.row-label-input');
-        if (ta) { autoResize(ta); }
+        if (ta) autoResize(ta);
       });
     }
 
-    function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
     function applyFmt(i, type) {
       const ta = document.getElementById(`lbl-${i}`);
       if (!ta) return;
-      const start = ta.selectionStart, end = ta.selectionEnd;
-      const sel = ta.value.substring(start, end);
-      let insert = '';
-      if (type === 'bold') insert = `**${sel || 'bold text'}**`;
-      else if (type === 'italic') insert = `*${sel || 'italic text'}*`;
-      else if (type === 'newline') insert = '\n';
-      const before = ta.value.substring(0, start);
-      const after = ta.value.substring(end);
-      ta.value = before + insert + after;
+      const s = ta.selectionStart, e = ta.selectionEnd;
+      const sel = ta.value.substring(s, e);
+      const ins = type === 'bold' ? `**${sel || 'bold text'}**`
+        : type === 'italic' ? `*${sel || 'italic text'}*`
+          : '\n';
+      ta.value = ta.value.substring(0, s) + ins + ta.value.substring(e);
       chartData[i].label = ta.value;
       ta.focus();
-      ta.selectionStart = ta.selectionEnd = start + insert.length;
+      ta.selectionStart = ta.selectionEnd = s + ins.length;
       autoResize(ta);
       renderChart();
     }
@@ -863,7 +1000,6 @@
       chartData.push({ label: 'New Segment', value: 5, color: `hsl(${hue},70%,55%)`, pos: null });
       buildPanel(); renderChart();
     }
-
     function removeRow(i) { chartData.splice(i, 1); buildPanel(); renderChart(); }
 
     function randomizeColors() {
@@ -873,18 +1009,87 @@
       chartData.forEach((d, i) => d.color = pal[i % pal.length]);
       buildPanel(); renderChart();
     }
-
     function resetPositions() { chartData.forEach(d => d.pos = null); renderChart(); }
 
-    // ─── Parse formatted label markup ─────────────────────────────────────────
-    // Supports **bold**, *italic*, \n newlines
-    // Returns array of lines, each line = array of spans: { text, bold, italic }
+    // ── Excel / CSV Import ────────────────────────────────────────────────────
+    const PALETTE = [
+      '#f7941d', '#f05a24', '#be1e2d', '#f15a9e', '#c2a8d8', '#7b5ea7',
+      '#3b1f6b', '#1a5ca8', '#5dbdba', '#8dc63f', '#f7d41d', '#2ecc71',
+      '#e74c3c', '#3498db', '#9b59b6', '#1abc9c', '#e67e22', '#c0392b',
+      '#8e44ad', '#2980b9', '#27ae60', '#d35400'
+    ];
+
+    function importExcel(file) {
+      if (!file) return;
+      const zone = document.getElementById('excel-drop-zone');
+      zone.classList.remove('drag-active');
+      const statusEl = document.getElementById('excel-status');
+      statusEl.className = 'excel-status';
+      statusEl.textContent = '';
+
+      // Reset file input so same file can be re-imported
+      document.getElementById('excel-file-input').value = '';
+
+      const reader = new FileReader();
+      reader.onerror = () => showExcelStatus('Failed to read file.', 'err');
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          const ws = wb.Sheets[wb.SheetNames[0]];  // first sheet
+          // Convert to array of arrays; skip header if first row non-numeric col B
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          if (!rows || rows.length === 0) { showExcelStatus('Sheet is empty.', 'err'); return; }
+
+          // Detect if first row is a header (col B is not a number)
+          let start = 0;
+          if (rows[0] && isNaN(parseFloat(rows[0][1]))) start = 1;
+
+          const imported = [];
+          for (let r = start; r < rows.length; r++) {
+            const row = rows[r];
+            const label = String(row[0] || '').trim();
+            const val = parseFloat(row[1]);
+            if (!label || isNaN(val) || val <= 0) continue;
+            imported.push({ label, value: val, color: PALETTE[imported.length % PALETTE.length], pos: null });
+          }
+
+          if (imported.length === 0) { showExcelStatus('No valid rows found. Check Col A = label, Col B = number.', 'err'); return; }
+
+          chartData = imported;
+          buildPanel();
+          renderChart();
+          showExcelStatus(`✓ Imported ${imported.length} segments from "${file.name}"`, 'ok');
+        } catch (err) {
+          showExcelStatus('Parse error: ' + err.message, 'err');
+        }
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    function showExcelStatus(msg, type) {
+      const el = document.getElementById('excel-status');
+      el.textContent = msg;
+      el.className = 'excel-status ' + type;
+    }
+
+    function excelDragOver(e) {
+      e.preventDefault();
+      document.getElementById('excel-drop-zone').classList.add('drag-active');
+    }
+    function excelDragLeave() {
+      document.getElementById('excel-drop-zone').classList.remove('drag-active');
+    }
+    function excelDrop(e) {
+      e.preventDefault();
+      const file = e.dataTransfer?.files?.[0];
+      if (file) importExcel(file);
+    }
+
+    // ── Label markup parser ───────────────────────────────────────────────────
+    // Returns: array-of-lines, each line = [{text, bold, italic}]
     function parseLabel(raw) {
-      const rawLines = raw.split('\n');
-      return rawLines.map(line => {
-        const spans = [];
-        // tokenise: **...** bold, *...* italic, plain
-        const re = /\*\*(.+?)\*\*|\*(.+?)\*/gs;
+      return raw.split('\n').map(line => {
+        const spans = [], re = /\*\*(.+?)\*\*|\*(.+?)\*/gs;
         let last = 0, m;
         while ((m = re.exec(line)) !== null) {
           if (m.index > last) spans.push({ text: line.slice(last, m.index), bold: false, italic: false });
@@ -897,37 +1102,34 @@
       });
     }
 
-    // ─── SVG helpers ──────────────────────────────────────────────────────────
-    function svgEl(tag, attrs = {}) {
-      const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
-      Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
-      return e;
+    // ── Fan-out label positions ───────────────────────────────────────────────
+    function fanOut(arr, cx, cy, labelR, labelSz, H) {
+      const minGap = labelSz * 1.65;
+      let pos = arr.map(p => {
+        const [, ly] = polarToXY(cx, cy, labelR, p.midDeg);
+        return { p, y: ly };
+      });
+      pos.sort((a, b) => a.y - b.y);
+      for (let it = 0; it < 300; it++) {
+        let mv = false;
+        for (let i = 1; i < pos.length; i++) {
+          const d = pos[i].y - pos[i - 1].y;
+          if (d < minGap) {
+            const push = (minGap - d) / 2;
+            pos[i - 1].y -= push; pos[i].y += push; mv = true;
+          }
+        }
+        if (!mv) break;
+      }
+      pos.forEach(p => { p.y = Math.max(20, Math.min(H - 20, p.y)); });
+      return pos.map(po => ({ p: po.p, autoY: po.y }));
     }
-    function appSvg(parent, tag, attrs) { parent.appendChild(svgEl(tag, attrs)); }
 
-    function polarToXY(cx, cy, r, deg) {
-      const rad = (deg - 90) * Math.PI / 180;
-      return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
-    }
-    function slice(cx, cy, oR, iR, s, e) {
-      const [ox1, oy1] = polarToXY(cx, cy, oR, s), [ox2, oy2] = polarToXY(cx, cy, oR, e);
-      const [ix1, iy1] = polarToXY(cx, cy, iR, e), [ix2, iy2] = polarToXY(cx, cy, iR, s);
-      const lg = (e - s) > 180 ? 1 : 0;
-      return `M${ox1} ${oy1} A${oR} ${oR} 0 ${lg} 1 ${ox2} ${oy2} L${ix1} ${iy1} A${iR} ${iR} 0 ${lg} 0 ${ix2} ${iy2}Z`;
-    }
-
-    // ─── SVG label drag state ──────────────────────────────────────────────────
-    let svgDrag = null; // { dataIdx, baseX, baseY, cursorX0, cursorY0 }
-
-    // ─── Render ───────────────────────────────────────────────────────────────
-    let lastParts = []; // store computed parts for drag use
-
+    // ── Render ────────────────────────────────────────────────────────────────
     function renderChart() {
       const svg = document.getElementById('chart-svg');
-      const W = 900, H = 600;
-      const cx = W / 2, cy = H / 2;
+      const W = SVG_W, H = SVG_H, cx = W / 2, cy = H / 2;
 
-      // Config values
       const outerR = +document.getElementById('cfg-outer').value;
       const innerPct = +document.getElementById('cfg-inner-pct').value / 100;
       const innerR = outerR * innerPct;
@@ -947,232 +1149,189 @@
       const bgColor = document.getElementById('cfg-bg-color').value;
 
       const total = chartData.reduce((s, d) => s + Math.max(0, d.value), 0) || 1;
-      const valid = chartData.filter(d => d.value > 0);
 
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.innerHTML = '';
 
-      // Defs (shadow filter)
+      // ── Defs ────────────────────────────────────────────────────────────
       const defs = svgEl('defs');
-      const filter = svgEl('filter', { id: 'dropshadow', x: '-20%', y: '-20%', width: '140%', height: '140%' });
-      filter.appendChild(svgEl('feDropShadow', { dx: '0', dy: '4', stdDeviation: '12', 'flood-color': 'rgba(0,0,0,0.11)' }));
-      defs.appendChild(filter);
+      const filt = svgEl('filter', { id: 'ds', x: '-20%', y: '-20%', width: '140%', height: '140%' });
+      filt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '4', stdDeviation: '12', 'flood-color': 'rgba(0,0,0,0.11)' }));
+      defs.appendChild(filt);
       svg.appendChild(defs);
 
-      // Background
-      svg.appendChild(svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: bgColor }));
-
-      // Shadow disc
-      appSvg(svg, 'circle', { cx, cy, r: outerR + 18, fill: ringColor, filter: 'url(#dropshadow)' });
+      // ── Background ──────────────────────────────────────────────────────
+      appSvg(svg, 'rect', { x: 0, y: 0, width: W, height: H, fill: bgColor });
+      appSvg(svg, 'circle', { cx, cy, r: outerR + 18, fill: ringColor, filter: 'url(#ds)' });
       appSvg(svg, 'circle', { cx, cy, r: innerR - 2, fill: 'white' });
 
-      // Build parts
-      let parts = [];
-      let angle = 0;
-      valid.forEach((d, vi) => {
-        const totalIdx = chartData.indexOf(d);
+      // ── Slices ──────────────────────────────────────────────────────────
+      const valid = chartData.filter(d => d.value > 0);
+      let parts = [], angle = 0;
+      valid.forEach(d => {
         const deg = (d.value / total) * 360;
-        const midDeg = angle + deg / 2;
-        parts.push({ ...d, totalIdx, startDeg: angle, endDeg: angle + deg, midDeg, pct: d.value / total * 100 });
+        parts.push({ ...d, tidx: chartData.indexOf(d), startDeg: angle, endDeg: angle + deg, midDeg: angle + deg / 2, pct: d.value / total * 100 });
         angle += deg;
       });
-      lastParts = parts;
 
-      // Draw slices
-      const sliceGroup = svgEl('g');
+      const sliceG = svgEl('g');
       parts.forEach(p => {
         const s = p.startDeg + gapDeg / 2, e = p.endDeg - gapDeg / 2;
         if (e <= s) return;
-        const path = svgEl('path', { d: slice(cx, cy, outerR, innerR, s, e), fill: p.color, style: 'cursor:pointer;transition:opacity 0.18s' });
+        const path = svgEl('path', { d: slicePath(cx, cy, outerR, innerR, s, e), fill: p.color, style: 'cursor:pointer;transition:opacity 0.18s' });
         path.addEventListener('mouseenter', () => path.setAttribute('opacity', '0.8'));
-        path.addEventListener('mouseleave', () => path.setAttribute('opacity', '1'));
-        sliceGroup.appendChild(path);
+        path.addEventListener('mouseleave', () => path.removeAttribute('opacity'));
+        sliceG.appendChild(path);
       });
-      svg.appendChild(sliceGroup);
+      svg.appendChild(sliceG);
       appSvg(svg, 'circle', { cx, cy, r: innerR - 1, fill: 'white' });
 
-      // Center text (title)
+      // ── Center text ──────────────────────────────────────────────────────
       const tg = svgEl('g');
       const tLines = titleTxt.split('\n').filter(Boolean);
       const lh = titleSz * 1.45;
-      const totalTH = tLines.length * lh + (subTxt ? subSz * 2.2 : 0);
-      let ty = cy - totalTH / 2 + titleSz;
+      let ty = cy - (tLines.length * lh + (subTxt ? subSz * 2.2 : 0)) / 2 + titleSz;
       tLines.forEach(line => {
-        const t = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': titleSz, 'font-weight': '700', 'font-family': 'Inter, sans-serif' });
+        const t = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': titleSz, 'font-weight': '700', 'font-family': 'Inter,sans-serif' });
         t.textContent = line; tg.appendChild(t); ty += lh;
       });
       if (subTxt) {
         ty += subSz * 0.6;
-        const sub = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': subSz, 'font-weight': '600', 'font-family': 'Inter, sans-serif', opacity: '0.72' });
+        const sub = svgEl('text', { x: cx, y: ty, 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: titleClr, 'font-size': subSz, 'font-weight': '600', 'font-family': 'Inter,sans-serif', opacity: '0.72' });
         sub.textContent = subTxt; tg.appendChild(sub);
       }
       svg.appendChild(tg);
 
-      // ── Labels ──────────────────────────────────────────────────────────────
+      // ── Labels ───────────────────────────────────────────────────────────
       const labelR = outerR + labelOff;
-      const rightParts = parts.filter(p => p.midDeg % 360 < 180);
-      const leftParts = parts.filter(p => p.midDeg % 360 >= 180);
+      const rightArr = parts.filter(p => p.midDeg % 360 < 180);
+      const leftArr = parts.filter(p => p.midDeg % 360 >= 180);
+      const rfanned = fanOut(rightArr, cx, cy, labelR, labelSz, H);
+      const lfanned = fanOut(leftArr, cx, cy, labelR, labelSz, H);
 
-      function fanOut(arr) {
-        const gap = labelSz * 1.65;
-        let pos = arr.map(p => { const [, ly] = polarToXY(cx, cy, labelR, p.midDeg); return { p, y: ly }; });
-        pos.sort((a, b) => a.y - b.y);
-        for (let it = 0; it < 300; it++) {
-          let mv = false;
-          for (let i = 1; i < pos.length; i++) {
-            const d = pos[i].y - pos[i - 1].y;
-            if (d < gap) { const push = (gap - d) / 2; pos[i - 1].y -= push; pos[i].y += push; mv = true; }
-          }
-          if (!mv) break;
-        }
-        pos.forEach(p => p.y = Math.max(20, Math.min(H - 20, p.y)));
-        return pos.map(po => ({ p: po.p, autoY: po.y }));
-      }
-
-      const rf = fanOut(rightParts);
-      const lf = fanOut(leftParts);
+      // Separate groups: connectors (below) and label bodies (above)
+      const connGroup = svgEl('g'); svg.appendChild(connGroup);
+      const labelGroup = svgEl('g'); svg.appendChild(labelGroup);
 
       function drawLabel({ p, autoY }, isRight) {
-        const tidx = p.totalIdx;
-        const custom = chartData[tidx] ? chartData[tidx].pos : null;
-        const finalX = custom ? custom.x : (isRight ? cx + outerR + labelOff - 2 : cx - outerR - labelOff + 2);
-        const finalY = custom ? custom.y : autoY;
-        const side = custom ? (finalX >= cx ? 'right' : 'left') : (isRight ? 'right' : 'left');
-        const isR = side === 'right';
-        const dotR = pctSz * 0.38;
-        const textX = isR ? finalX + 8 : finalX - 8;
-        const lblAnchor = isR ? 'start' : 'end';
+        const tidx = p.tidx;
+        const saved = chartData[tidx]?.pos;
 
-        // Connector line
+        // Anchor X for the "elbow" end of the connector line
+        const anchorX = isRight
+          ? cx + outerR + labelOff - 2
+          : cx - outerR - labelOff + 2;
+
+        // Final position: use saved custom pos if available, else auto
+        const finalX = saved ? saved.x : anchorX;
+        const finalY = saved ? saved.y : autoY;
+
+        const dotR = pctSz * 0.38;
+        const textX = isRight ? finalX + 8 + dotR * 2 + 3 : finalX - 8 - dotR * 2 - 3;
+        const anchor = isRight ? 'start' : 'end';
+
+        // ── Connector: drawn in connGroup (data-conn-idx for live drag updates) ──
         const [sx, sy] = polarToXY(cx, cy, outerR - 4, p.midDeg);
         const [ex, ey] = polarToXY(cx, cy, outerR + labelOff * 0.55, p.midDeg);
 
-        // Build draggable group
-        const g = svgEl('g');
-        g.setAttribute('class', 'svg-label-group');
-        g.setAttribute('data-label-idx', tidx);
-        g.setAttribute('style', 'cursor:grab');
-
         if (showLines) {
-          const line = svgEl('polyline', {
+          const conn = svgEl('polyline', {
             points: `${sx},${sy} ${ex},${ey} ${finalX},${finalY}`,
             fill: 'none', stroke: p.color, 'stroke-width': '1.3',
-            'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+            'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+            'data-conn-idx': tidx,
+            'data-base': `${sx},${sy} ${ex},${ey}`  // static part stored for drag updates
           });
-          g.appendChild(line);
+          connGroup.appendChild(conn);
         }
+
+        // ── Label group (data-label-idx for live drag transform) ──────────────
+        const g = svgEl('g');
+        g.setAttribute('data-label-idx', String(tidx));
+        g.setAttribute('data-auto-x', String(anchorX));  // store auto pos for drag start
+        g.setAttribute('data-auto-y', String(autoY));
+        g.style.cursor = 'grab';
 
         if (showPct) {
           const pctT = svgEl('text', {
-            x: isR ? finalX - 4 : finalX + 4, y: finalY - labelSz * 1.15,
-            'text-anchor': isR ? 'end' : 'start', 'dominant-baseline': 'middle',
-            fill: p.color, 'font-size': pctSz, 'font-weight': '800', 'font-family': 'Inter, sans-serif'
+            x: isRight ? finalX - 4 : finalX + 4,
+            y: finalY - labelSz * 1.15,
+            'text-anchor': isRight ? 'end' : 'start',
+            'dominant-baseline': 'middle',
+            fill: p.color, 'font-size': pctSz, 'font-weight': '800', 'font-family': 'Inter,sans-serif'
           });
           pctT.textContent = `${Math.round(p.pct)}%`;
           g.appendChild(pctT);
         }
 
         if (showDot) {
-          appSvg(g, 'circle', { cx: textX + (isR ? 0 : -4), cy: finalY, r: dotR, fill: p.color });
+          appSvg(g, 'circle', { cx: isRight ? finalX + 8 : finalX - 8, cy: finalY, r: dotR, fill: p.color });
         }
 
-        // Formatted label text
-        const rawLabel = p.label || '';
-        const parsedLines = parseLabel(rawLabel);
-        const lineHeight = labelSz * 1.45;
-        const lblDotOffset = dotR * 2 + 3;
-        const lblX = isR ? textX + lblDotOffset : textX - lblDotOffset;
-        const startY = finalY - ((parsedLines.length - 1) * lineHeight) / 2;
+        // Formatted text lines
+        const parsedLines = parseLabel(p.label || '');
+        const lineH = labelSz * 1.45;
+        const startY = finalY - ((parsedLines.length - 1) * lineH) / 2;
 
         parsedLines.forEach((spans, li) => {
-          const tEl = svgEl('text', {
-            x: lblX, y: startY + li * lineHeight,
-            'text-anchor': lblAnchor, 'dominant-baseline': 'middle',
-            fill: '#333', 'font-size': labelSz, 'font-family': 'Inter, sans-serif'
+          const t = svgEl('text', {
+            x: textX, y: startY + li * lineH,
+            'text-anchor': anchor, 'dominant-baseline': 'middle',
+            fill: '#333', 'font-size': labelSz, 'font-family': 'Inter,sans-serif'
           });
           if (spans.length === 1 && !spans[0].bold && !spans[0].italic) {
-            tEl.textContent = spans[0].text;
+            t.textContent = spans[0].text;
           } else {
             spans.forEach(sp => {
-              const ts = svgEl('tspan', {
-                'font-weight': sp.bold ? '800' : '400',
-                'font-style': sp.italic ? 'italic' : 'normal'
-              });
+              const ts = svgEl('tspan', { 'font-weight': sp.bold ? '800' : '400', 'font-style': sp.italic ? 'italic' : 'normal' });
               ts.textContent = sp.text;
-              tEl.appendChild(ts);
+              t.appendChild(ts);
             });
           }
-          g.appendChild(tEl);
+          g.appendChild(t);
         });
 
-        // Invisible hit area for easier grabbing
-        const bbox_approx_h = Math.max(parsedLines.length * lineHeight + (showPct ? pctSz * 2 : 0), 24);
-        const bbox_approx_w = 120;
-        const hitX = isR ? finalX - 4 : finalX - bbox_approx_w + 4;
-        appSvg(g, 'rect', {
-          x: hitX, y: finalY - bbox_approx_h / 2 - (showPct ? pctSz * 1.5 : 0),
-          width: bbox_approx_w + 8, height: bbox_approx_h + (showPct ? pctSz * 1.8 : 0),
-          fill: 'transparent', rx: 4
-        });
+        // Generous invisible hit area
+        const hitH = Math.max(parsedLines.length * lineH + pctSz * 2.5, 28);
+        const hitW = 140;
+        const hitX = isRight ? finalX - 6 : finalX - hitW + 6;
+        const hitYStart = finalY - hitH / 2 - pctSz * 1.6;
+        appSvg(g, 'rect', { x: hitX, y: hitYStart, width: hitW, height: hitH + pctSz * 1.8, fill: 'transparent', rx: 4 });
 
-        svg.appendChild(g);
+        labelGroup.appendChild(g);
       }
 
-      rf.forEach(item => drawLabel(item, true));
-      lf.forEach(item => drawLabel(item, false));
+      rfanned.forEach(item => drawLabel(item, true));
+      lfanned.forEach(item => drawLabel(item, false));
 
-      // ── SVG Label Drag Events ───────────────────────────────────────────────
-      attachSvgDrag(svg, W, H);
-    }
-
-    function attachSvgDrag(svg, W, H) {
-      const rect = () => svg.getBoundingClientRect();
-
-      function toSvgCoords(clientX, clientY) {
-        const r = rect();
-        return [(clientX - r.left) / r.width * W, (clientY - r.top) / r.height * H];
-      }
-
-      svg.addEventListener('mousedown', e => {
+      // ── Wire mousedown for labels (re-attached each render, svg.innerHTML wipes old ones) ─
+      labelGroup.addEventListener('mousedown', e => {
         const g = e.target.closest('[data-label-idx]');
         if (!g) return;
         e.preventDefault();
-        const idx = parseInt(g.dataset.labelIdx);
-        const [mx, my] = toSvgCoords(e.clientX, e.clientY);
-        const cur = chartData[idx].pos;
-        svgDrag = {
-          idx,
-          startPosX: cur ? cur.x : mx,
-          startPosY: cur ? cur.y : my,
-          startMX: mx, startMY: my
-        };
+        e.stopPropagation();
+
+        const tidx = parseInt(g.dataset.labelIdx);
+        const saved = chartData[tidx]?.pos;
+        const [mx, my] = toSvgXY(e.clientX, e.clientY);
+
+        // Use saved position or the auto-computed anchor stored as data attrs
+        const startPosX = saved ? saved.x : parseFloat(g.dataset.autoX);
+        const startPosY = saved ? saved.y : parseFloat(g.dataset.autoY);
+
+        drag = { idx: tidx, startPosX, startPosY, startMX: mx, startMY: my };
         document.body.style.cursor = 'grabbing';
-      });
-
-      window.addEventListener('mousemove', e => {
-        if (!svgDrag) return;
-        const [mx, my] = toSvgCoords(e.clientX, e.clientY);
-        const dx = mx - svgDrag.startMX;
-        const dy = my - svgDrag.startMY;
-        chartData[svgDrag.idx].pos = {
-          x: Math.max(4, Math.min(W - 4, svgDrag.startPosX + dx)),
-          y: Math.max(4, Math.min(H - 4, svgDrag.startPosY + dy))
-        };
-        renderChart();
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (svgDrag) { svgDrag = null; document.body.style.cursor = ''; }
+        g.style.cursor = 'grabbing';
       });
     }
 
-    // ─── Export ───────────────────────────────────────────────────────────────
+    // ── Export ────────────────────────────────────────────────────────────────
     function exportSVG() {
       const svg = document.getElementById('chart-svg');
       const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'donut-chart.svg'; a.click();
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'donut-chart.svg' });
+      a.click();
     }
-
     function exportPNG() {
       const svg = document.getElementById('chart-svg');
       const clone = svg.cloneNode(true);
@@ -1180,19 +1339,16 @@
       const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml' }));
       const img = new Image();
       img.onload = () => {
-        const c = document.createElement('canvas'); c.width = 1800; c.height = 1200;
+        const c = Object.assign(document.createElement('canvas'), { width: 1800, height: 1200 });
         const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
-        const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'donut-chart.png'; a.click();
+        Object.assign(document.createElement('a'), { href: c.toDataURL('image/png'), download: 'donut-chart.png' }).click();
       };
       img.src = url;
     }
 
-    // ─── Live inputs ──────────────────────────────────────────────────────────
-    document.querySelectorAll('#cfg-title, #cfg-subtitle').forEach(el =>
-      el.addEventListener('input', renderChart));
-
-    // ─── Init ─────────────────────────────────────────────────────────────────
+    // ── Init ──────────────────────────────────────────────────────────────────
+    document.querySelectorAll('#cfg-title,#cfg-subtitle').forEach(el => el.addEventListener('input', renderChart));
     buildPanel();
     renderChart();
   </script>
