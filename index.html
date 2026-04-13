@@ -600,6 +600,35 @@
       display: block;
     }
 
+    /* Symbols Dropdown */
+    .sym-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .sym-menu {
+      display: none;
+      position: absolute;
+      top: 100%; left: 0;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 100;
+      padding: 8px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      width: 180px;
+    }
+    .sym-menu.visible { display: grid; }
+    .sym-item {
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      background: #f7f8fd; border: 1px solid var(--border);
+      border-radius: 4px; cursor: pointer; font-size: 0.9rem;
+      transition: all 0.15s;
+    }
+    .sym-item:hover { background: var(--accent); color: white; border-color: transparent; }
+
     /* Sheet picker tabs */
     .sheet-picker {
       display: none;
@@ -968,10 +997,20 @@
         <button class="delete-btn" title="Remove" onclick="removeRow(${i})">✕</button>
       </div>
       <div class="fmt-toolbar">
-        <button class="fmt-btn bold"   onclick="applyFmt(${i},'bold')"    title="Bold (**text**)">B</button>
-        <button class="fmt-btn italic" onclick="applyFmt(${i},'italic')"  title="Italic (*text*)">I</button>
+        <button class="fmt-btn bold"   onclick="applyFmt(${i},'bold')"    title="Bold (**text** or <b>)">B</button>
+        <button class="fmt-btn italic" onclick="applyFmt(${i},'italic')"  title="Italic (*text* or <i>)">I</button>
+        <button class="fmt-btn"        onclick="applyFmt(${i},'sup')"     title="Superscript (<sup>)">x²</button>
+        <button class="fmt-btn"        onclick="applyFmt(${i},'sub')"     title="Subscript (<sub>)">x₂</button>
+        <div class="sym-dropdown">
+          <button class="fmt-btn" onclick="toggleSyms(${i})" title="Insert Symbol">Ω ▼</button>
+          <div class="sym-menu" id="syms-${i}">
+            ${['θ', 'π', 'Δ', 'Σ', 'μ', 'σ', 'Ω', 'α', 'β', 'γ', '≤', '≥', '≠', '±', '≈', '×', '÷', '∞', '√', '°'].map(s => `
+              <div class="sym-item" onclick="insertSymbol(${i}, '${s}')">${s}</div>
+            `).join('')}
+          </div>
+        </div>
         <button class="fmt-btn"        onclick="applyFmt(${i},'newline')" title="New line">↵</button>
-        <span class="fmt-hint">**bold**&nbsp;&nbsp;*italic*&nbsp;&nbsp;↵ newline</span>
+        <span class="fmt-hint">Equations supported</span>
       </div>
       <textarea class="row-label-input" id="lbl-${i}" rows="2" placeholder="Label text…"
         oninput="chartData[${i}].label=this.value;renderChart();autoResize(this)">${escHtml(d.label)}</textarea>
@@ -1016,15 +1055,46 @@
       if (!ta) return;
       const s = ta.selectionStart, e = ta.selectionEnd;
       const sel = ta.value.substring(s, e);
-      const ins = type === 'bold' ? `**${sel || 'bold text'}**`
-        : type === 'italic' ? `*${sel || 'italic text'}*`
-          : '\n';
+      let ins = '';
+      if (type === 'bold') ins = `**${sel || 'bold text'}**`;
+      else if (type === 'italic') ins = `*${sel || 'italic text'}*`;
+      else if (type === 'sup') ins = `<sup>${sel || 'sup'}</sup>`;
+      else if (type === 'sub') ins = `<sub>${sel || 'sub'}</sub>`;
+      else if (type === 'newline') ins = '\n';
       ta.value = ta.value.substring(0, s) + ins + ta.value.substring(e);
       chartData[i].label = ta.value;
       ta.focus();
       ta.selectionStart = ta.selectionEnd = s + ins.length;
       autoResize(ta);
       renderChart();
+    }
+
+    function toggleSyms(i) {
+      const menu = document.getElementById(`syms-${i}`);
+      const isVisible = menu.classList.contains('visible');
+      // Close all other menus first
+      document.querySelectorAll('.sym-menu').forEach(m => m.classList.remove('visible'));
+      if (!isVisible) menu.classList.add('visible');
+      
+      // Close when clicking outside
+      const close = (e) => {
+        if (!e.target.closest('.sym-dropdown')) {
+          menu.classList.remove('visible');
+          document.removeEventListener('click', close);
+        }
+      };
+      if (!isVisible) setTimeout(() => document.addEventListener('click', close), 0);
+    }
+
+    function insertSymbol(i, sym) {
+      const ta = document.getElementById(`lbl-${i}`);
+      const s = ta.selectionStart, e = ta.selectionEnd;
+      ta.value = ta.value.substring(0, s) + sym + ta.value.substring(e);
+      chartData[i].label = ta.value;
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = s + sym.length;
+      renderChart();
+      document.getElementById(`syms-${i}`).classList.remove('visible');
     }
 
     function addRow() {
@@ -1163,19 +1233,25 @@
     }
 
     // ── Label markup parser ───────────────────────────────────────────────────
-    // Returns: array-of-lines, each line = [{text, bold, italic}]
+    // Returns: array-of-lines, each line = [{text, bold, italic, sup, sub}]
     function parseLabel(raw) {
       return raw.split('\n').map(line => {
-        const spans = [], re = /\*\*(.+?)\*\*|\*(.+?)\*/gs;
+        const spans = [];
+        // Match **bold**, *italic*, and basic HTML tags <b>, <i>, <sup>, <sub>
+        const re = /\*\*(.*?)\*\*|\*(.*?)\*|<b>(.*?)<\/b>|<i>(.*?)<\/i>|<sup>(.*?)<\/sup>|<sub>(.*?)<\/sub>/gi;
         let last = 0, m;
         while ((m = re.exec(line)) !== null) {
-          if (m.index > last) spans.push({ text: line.slice(last, m.index), bold: false, italic: false });
-          if (m[1] !== undefined) spans.push({ text: m[1], bold: true, italic: false });
-          else spans.push({ text: m[2], bold: false, italic: true });
+          if (m.index > last) spans.push({ text: line.slice(last, m.index) });
+          
+          if (m[1] !== undefined || m[3] !== undefined) spans.push({ text: m[1] || m[3], bold: true });
+          else if (m[2] !== undefined || m[4] !== undefined) spans.push({ text: m[2] || m[4], italic: true });
+          else if (m[5] !== undefined) spans.push({ text: m[5], sup: true });
+          else if (m[6] !== undefined) spans.push({ text: m[6], sub: true });
+          
           last = m.index + m[0].length;
         }
-        if (last < line.length) spans.push({ text: line.slice(last), bold: false, italic: false });
-        return spans.length ? spans : [{ text: '', bold: false, italic: false }];
+        if (last < line.length) spans.push({ text: line.slice(last) });
+        return spans.length ? spans : [{ text: '' }];
       });
     }
 
@@ -1356,11 +1432,22 @@
             'text-anchor': anchor, 'dominant-baseline': 'middle',
             fill: '#333', 'font-size': labelSz, 'font-family': 'Inter,sans-serif'
           });
-          if (spans.length === 1 && !spans[0].bold && !spans[0].italic) {
+          if (spans.length === 1 && !spans[0].bold && !spans[0].italic && !spans[0].sup && !spans[0].sub) {
             t.textContent = spans[0].text;
           } else {
             spans.forEach(sp => {
-              const ts = svgEl('tspan', { 'font-weight': sp.bold ? '800' : '400', 'font-style': sp.italic ? 'italic' : 'normal' });
+              const attrs = {};
+              if (sp.bold) attrs['font-weight'] = '800';
+              if (sp.italic) attrs['font-style'] = 'italic';
+              if (sp.sup) {
+                attrs['baseline-shift'] = 'super';
+                attrs['font-size'] = '0.7em';
+              }
+              if (sp.sub) {
+                attrs['baseline-shift'] = 'sub';
+                attrs['font-size'] = '0.7em';
+              }
+              const ts = svgEl('tspan', attrs);
               ts.textContent = sp.text;
               t.appendChild(ts);
             });
