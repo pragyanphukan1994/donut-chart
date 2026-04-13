@@ -1413,7 +1413,7 @@
             'dominant-baseline': 'middle',
             fill: p.color, 'font-size': pctSz, 'font-weight': '800', 'font-family': 'Inter,sans-serif'
           });
-          pctT.textContent = `${Math.round(p.pct)}%`;
+          pctT.textContent = `${p.pct.toFixed(2)}%`;
           g.appendChild(pctT);
         }
 
