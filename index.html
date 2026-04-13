@@ -600,6 +600,34 @@
       display: block;
     }
 
+    /* Sheet picker tabs */
+    .sheet-picker {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .sheet-picker.visible { display: flex; }
+    .sheet-picker-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--muted);
+    }
+    .sheet-tabs {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .sheet-tab {
+      padding: 5px 12px; border-radius: 20px; font-size: 0.78rem;
+      font-weight: 600; font-family: inherit; cursor: pointer;
+      border: 1.5px solid var(--border); background: #f0f2f7;
+      color: var(--text); transition: all 0.15s; white-space: nowrap;
+    }
+    .sheet-tab:hover   { background: #e0e5f9; border-color: var(--accent); }
+    .sheet-tab.active  {
+      background: linear-gradient(135deg,#4f6ef7,#a259f7);
+      color: white; border-color: transparent;
+      box-shadow: 0 2px 8px rgba(79,110,247,0.35);
+    }
+
     /* Export bar */
     .export-bar {
       padding: 12px 20px;
@@ -800,6 +828,10 @@
             <div class="drop-sub" style="margin-top:6px;font-weight:600">Col A = Label &nbsp;|&nbsp; Col B = Value</div>
           </div>
           <div class="excel-status" id="excel-status"></div>
+          <div class="sheet-picker" id="sheet-picker">
+            <div class="sheet-picker-label">Select sheet to import</div>
+            <div class="sheet-tabs" id="sheet-tabs"></div>
+          </div>
         </div>
 
         <!-- Data Segments -->
@@ -1019,46 +1051,31 @@
       '#8e44ad', '#2980b9', '#27ae60', '#d35400'
     ];
 
+    // Stored workbook + last filename for sheet switching
+    let _wb = null, _wbFilename = '';
+
     function importExcel(file) {
       if (!file) return;
-      const zone = document.getElementById('excel-drop-zone');
-      zone.classList.remove('drag-active');
-      const statusEl = document.getElementById('excel-status');
-      statusEl.className = 'excel-status';
-      statusEl.textContent = '';
-
-      // Reset file input so same file can be re-imported
+      document.getElementById('excel-drop-zone').classList.remove('drag-active');
       document.getElementById('excel-file-input').value = '';
+      showExcelStatus('', '');
+      hideSheetPicker();
 
       const reader = new FileReader();
       reader.onerror = () => showExcelStatus('Failed to read file.', 'err');
-      reader.onload = e => {
+      reader.onload = ev => {
         try {
-          const wb = XLSX.read(e.target.result, { type: 'binary' });
-          const ws = wb.Sheets[wb.SheetNames[0]];  // first sheet
-          // Convert to array of arrays; skip header if first row non-numeric col B
-          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          if (!rows || rows.length === 0) { showExcelStatus('Sheet is empty.', 'err'); return; }
+          _wb = XLSX.read(ev.target.result, { type: 'binary' });
+          _wbFilename = file.name;
 
-          // Detect if first row is a header (col B is not a number)
-          let start = 0;
-          if (rows[0] && isNaN(parseFloat(rows[0][1]))) start = 1;
-
-          const imported = [];
-          for (let r = start; r < rows.length; r++) {
-            const row = rows[r];
-            const label = String(row[0] || '').trim();
-            const val = parseFloat(row[1]);
-            if (!label || isNaN(val) || val <= 0) continue;
-            imported.push({ label, value: val, color: PALETTE[imported.length % PALETTE.length], pos: null });
+          if (_wb.SheetNames.length === 1) {
+            // Only one sheet — import straight away
+            loadSheet(_wb.SheetNames[0]);
+          } else {
+            // Multiple sheets — show picker, don't auto-import
+            showSheetPicker(_wb.SheetNames);
+            showExcelStatus(`"${file.name}" has ${_wb.SheetNames.length} sheets — pick one below.`, 'ok');
           }
-
-          if (imported.length === 0) { showExcelStatus('No valid rows found. Check Col A = label, Col B = number.', 'err'); return; }
-
-          chartData = imported;
-          buildPanel();
-          renderChart();
-          showExcelStatus(`✓ Imported ${imported.length} segments from "${file.name}"`, 'ok');
         } catch (err) {
           showExcelStatus('Parse error: ' + err.message, 'err');
         }
@@ -1066,10 +1083,70 @@
       reader.readAsBinaryString(file);
     }
 
+    function loadSheet(sheetName) {
+      if (!_wb) return;
+      try {
+        const ws   = _wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (!rows || rows.length === 0) { showExcelStatus('Sheet "' + sheetName + '" is empty.', 'err'); return; }
+
+        // Auto-detect header: skip row 0 if col B is not numeric
+        let start = 0;
+        if (rows[0] && isNaN(parseFloat(rows[0][1]))) start = 1;
+
+        const imported = [];
+        for (let r = start; r < rows.length; r++) {
+          const row   = rows[r];
+          const label = String(row[0] || '').trim();
+          const val   = parseFloat(row[1]);
+          if (!label || isNaN(val) || val <= 0) continue;
+          imported.push({ label, value: val, color: PALETTE[imported.length % PALETTE.length], pos: null });
+        }
+
+        if (imported.length === 0) {
+          showExcelStatus('No valid rows in "' + sheetName + '". Check Col A = label, Col B = number.', 'err');
+          return;
+        }
+
+        chartData = imported;
+        buildPanel();
+        renderChart();
+        showExcelStatus(`✓ Imported ${imported.length} rows from "${sheetName}" (${_wbFilename})`, 'ok');
+
+        // Highlight active tab
+        document.querySelectorAll('.sheet-tab').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.sheet === sheetName);
+        });
+      } catch (err) {
+        showExcelStatus('Error reading sheet: ' + err.message, 'err');
+      }
+    }
+
+    function showSheetPicker(sheets) {
+      const picker = document.getElementById('sheet-picker');
+      const tabs   = document.getElementById('sheet-tabs');
+      tabs.innerHTML = '';
+      sheets.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className    = 'sheet-tab';
+        btn.textContent  = name;
+        btn.dataset.sheet = name;
+        btn.onclick      = () => loadSheet(name);
+        tabs.appendChild(btn);
+      });
+      picker.classList.add('visible');
+    }
+
+    function hideSheetPicker() {
+      document.getElementById('sheet-picker').classList.remove('visible');
+      document.getElementById('sheet-tabs').innerHTML = '';
+      _wb = null; _wbFilename = '';
+    }
+
     function showExcelStatus(msg, type) {
       const el = document.getElementById('excel-status');
       el.textContent = msg;
-      el.className = 'excel-status ' + type;
+      el.className   = type ? 'excel-status ' + type : 'excel-status';
     }
 
     function excelDragOver(e) {
